@@ -1,6 +1,19 @@
 import tkinter as tk
-from tkinter import ttk, scrolledtext, messagebox
+from tkinter import ttk, scrolledtext, messagebox, filedialog
 import random
+import os
+
+# ─── PDF export support (optional) ─────────────────────────────────
+try:
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.units import inch
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_LEFT, TA_CENTER
+    REPORTLAB_AVAILABLE = True
+except ImportError:
+    REPORTLAB_AVAILABLE = False
 
 # ────────────────────────────────────────
 #  Backstory Concept & Generation Logic
@@ -188,86 +201,96 @@ PERSONAL_COSTS = [
     "the feeling of belonging anywhere — every place feels like a stranger's house"
 ]
 
+# ─── New lists for expanding idea hooks ────────────────────────────
+FOLLOW_UP_PHRASES = [
+    "This event forged in them a {trait} spirit, driving them to {goal}.",
+    "Now, {pronoun} carries the weight of that day, seeking {desire}.",
+    "The memory of that moment haunts their dreams, pushing them to {action}.",
+    "They have never spoken of it, but it shapes every choice they make.",
+    "This tragedy left them with a scar—both visible and hidden—that defines who they are.",
+    "The experience awakened a {trait} nature within, and they now {behavior}.",
+    "Since then, {pronoun} has been driven by a single {emotion}: {emotion_detail}.",
+    "Every night, they dream of {dream_content}, a reminder of what was lost."
+]
+
+TRAITS = ["vengeful", "protective", "wary", "determined", "melancholic", "fierce", "compassionate", "ruthless"]
+GOALS = ["find the truth", "protect the innocent", "seek revenge", "gain power", "restore honor", "discover their destiny"]
+DESIRES = ["redemption", "answers", "peace", "belonging", "justice", "forgiveness"]
+ACTIONS = ["hone their skills", "seek out allies", "avoid attachments", "search for clues", "confront their past"]
+EMOTIONS = ["rage", "grief", "hope", "fear", "determination", "longing"]
+EMOTION_DETAILS = ["that burns like fire", "that never fades", "that whispers in the dark", "that drives them forward"]
+DREAM_CONTENTS = ["a burning village", "a face they can't recall", "a voice calling their name", "a door that won't open"]
+BEHAVIORS = ["trust no one", "help strangers in need", "seek solitude", "look for signs", "practice their craft obsessively"]
+
 import random
 
-# def generate_concepts(data):
-#     concepts = []
-    
-#     # Core hook templates – expand these as much as you want!
-#     HOOK_TEMPLATES = [
-#         "A catastrophic {tragedy_type} wiped out their family/village, but they survived clutching {mysterious_item}, which now haunts their dreams.",
-#         "In a moment of desperation, {power_awakening}, revealing a {class_tied_power} they never knew they possessed.",
-#         "Betrayed and left for dead by {betrayer_role}, they clawed their way back to life fueled by an unquenchable need for {motivation}.",
-#         "An ancient {family_secret} was revealed on their coming-of-age day: they are {hidden_truth}, and shadowy forces now pursue them.",
-#         "Mentored in secret by {mysterious_mentor}, they learned forbidden skills/knowledge that changed their destiny forever.",
-#         "They heroically saved {saved_who} from {danger}, but the act cost them {personal_cost} and branded them an outcast.",
-#         "Cursed after {curse_trigger}, a {curse_effect} now grows within them – they adventure to find a cure or to master it.",
-#         "Exiled for {exile_reason}, they wander the world seeking {exile_goal} while carrying the shame (or pride) of their past.",
-#         "A prophecy spoken over their cradle named them as {prophecy_role}; now signs point to them fulfilling (or defying) it.",
-#         "They accidentally bound themselves to {entity_type} in a desperate bargain, gaining power at a terrible ongoing price.",
-#         "Raised in isolation by {guardian_type}, they escaped/ were released into the world with a mission only they can complete.",
-#         "Witness to a forbidden ritual gone wrong, they absorbed {residual_power} and now struggle to control its chaotic surges."
-#     ]
-    
-#     # Larger pools for variety
-#     TRAGEDY_TYPES     = ["bandit raid", "magical catastrophe", "plague of shadow", "dragon's wrath", "noble purge", "demonic incursion", "rival clan's vengeance"]
-#     POWER_AWAKENINGS  = ["a surge of raw magic erupted from within", "an otherworldly voice offered power", "a bloodline long dormant ignited", "a divine spark awakened"]
-#     BETRAYER_ROLES    = ["their own sibling", "a sworn shield-brother/sister", "a lover they trusted completely", "their mentor/teacher", "a childhood companion turned rival"]
-#     FAMILY_SECRETS    = ["descended from a fallen archmage", "heir to a cursed throne", "the vessel for a slumbering fiend", "reincarnation of a legendary hero", "bearer of forbidden celestial blood"]
-#     HIDDEN_TRUTHS     = ["the last surviving member of a destroyed bloodline", "marked for sacrifice by an ancient cult", "destined to tip the balance in a cosmic war"]
-#     MYSTERIOUS_MENTORS= ["a disguised archfey", "a lich in hiding", "a retired planar traveler", "a blind oracle", "a ghost of their ancestor"]
-#     SAVED_WHO         = ["an entire hamlet", "a noble's child", "a powerful druid", "strangers who later became legends"]
-#     PERSONAL_COSTS    = ["their voice", "their family estate", "their memories of home", "the trust of their people", "a piece of their humanity"]
-#     CURSE_TRIGGERS    = ["defiling a sacred grove", "opening a sealed tomb", "killing a fey creature in rage", "drinking from a tainted spring"]
-#     CURSE_EFFECTS     = ["shadows follow and whisper", "random bursts of uncontrolled magic", "slowly turning to stone", "nightmares that bleed into reality"]
-#     EXILE_REASONS     = ["refusing an unjust order", "loving the wrong person", "stealing to feed the starving", "exposing corruption"]
-#     EXILE_GOALS       = ["vindication", "a new family", "revenge on those who wronged them", "a place to belong"]
-#     PROPHECY_ROLES    = ["the breaker of chains", "the harbinger of doom", "the light against encroaching darkness", "the uniter of fractured realms"]
-#     ENTITY_TYPES      = ["a shadowy patron", "an elemental prince", "a forgotten god", "a greatwyrm"]
-#     GUARDIAN_TYPES    = ["a reclusive hermit wizard", "a strict monastic order", "a pack of werewolves who raised them as kin"]
-    
-#     # Slight bias toward spellcaster-appropriate hooks if relevant
-#     spellcaster_classes = {"Sorcerer", "Warlock", "Wizard", "Bard", "Cleric", "Druid", "Paladin"}
-#     is_spellcaster = data["class_"] in spellcaster_classes
-    
-#     for i in range(3):
-#         template = random.choice(HOOK_TEMPLATES)
-        
-#         # Fill placeholders
-#         filled = template.format(
-#             tragedy_type     = random.choice(TRAGEDY_TYPES),
-#             mysterious_item  = random.choice(["a shard of a fallen star", "a blood-stained locket", "a map that redraws itself"]),
-#             power_awakening  = random.choice(POWER_AWAKENINGS) if is_spellcaster else "a fierce determination was born",
-#             class_tied_power = f"{data['class_'].lower()} gift" if is_spellcaster else "warrior's spirit",
-#             betrayer_role    = random.choice(BETRAYER_ROLES),
-#             motivation       = random.choice(["vengeance", "redemption", "truth at any cost", "protecting the innocent"]),
-#             family_secret    = random.choice(FAMILY_SECRETS),
-#             hidden_truth     = random.choice(HIDDEN_TRUTHS),
-#             mysterious_mentor= random.choice(MYSTERIOUS_MENTORS),
-#             saved_who        = random.choice(SAVED_WHO),
-#             danger           = random.choice(["certain death", "a collapsing ruin", "a rising demon"]),
-#             personal_cost    = random.choice(PERSONAL_COSTS),
-#             curse_trigger    = random.choice(CURSE_TRIGGERS),
-#             curse_effect     = random.choice(CURSE_EFFECTS),
-#             exile_reason     = random.choice(EXILE_REASONS),
-#             exile_goal       = random.choice(EXILE_GOALS),
-#             prophecy_role    = random.choice(PROPHECY_ROLES),
-#             entity_type      = random.choice(ENTITY_TYPES),
-#             guardian_type    = random.choice(GUARDIAN_TYPES),
-#             residual_power   = random.choice(["wild magic", "necrotic essence", "celestial radiance"])
-#         )
-        
-#         if data["details"]:
-#             filled += f"\n\nThis hook weaves in the user's requested elements: {data['details']}"
-        
-#         concepts.append(f"Idea {i+1}:\n{ filled }")
-    
-#     return concepts
+def get_pronouns(sex):
+    """Return a dict with subject, object, possessive pronouns based on sex string."""
+    sex_lower = sex.lower() if sex else ""
+    if sex_lower.startswith(("male", "m")) or sex_lower == "he":
+        return {"subj": "he", "obj": "him", "poss": "his"}
+    elif sex_lower.startswith(("female", "f")) or sex_lower == "she":
+        return {"subj": "she", "obj": "her", "poss": "her"}
+    else:
+        return {"subj": "they", "obj": "them", "poss": "their"}
+
+def generate_ai_concepts(data):
+    """
+    Use Groq to generate three short, tailored backstory hooks
+    based on the character data. Returns a list of three strings.
+    Falls back to the old random generator if the API call fails.
+    """
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        # Fallback hardcoded key (same as in generate_full_backstory)
+        api_key = "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"
+        if "gsk_" not in api_key:
+            raise Exception("No Groq API key found.")
+
+    client = groq.Groq(api_key=api_key)
+
+    prompt = f"""You are a creative assistant for D&D 5e character backstories. Based on the following character details, generate three distinct, compelling backstory hooks (short paragraphs, 2–4 sentences each) that could serve as the core origin/inciting incident for this character. Each hook should be unique, evocative, and tailored to the character's race, class, subclass (if any), alignment, age, gender, and any special details. Avoid generic tropes unless they fit perfectly. Number them "Idea 1:", "Idea 2:", "Idea 3:".
+
+Character:
+- Race: {data['race']}
+- Class: {data['class_']}
+- Subclass: {data['subclass'] or 'None'}
+- Alignment: {data['alignment']}
+- Age: {data['age'] or 'Young adult'}
+- Gender/Pronouns: {data['sex']}
+- Additional details/tone: {data['details'] or 'None'}
+
+Output only the three ideas, each labeled.
+"""
+
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",   # same model used for full backstory
+        messages=[
+            {"role": "system", "content": "You are a helpful D&D backstory assistant."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.8,
+        max_tokens=500,
+        top_p=0.9,
+    )
+
+    text = response.choices[0].message.content.strip()
+
+    # Parse the three ideas – they should be labeled "Idea 1:", "Idea 2:", etc.
+    import re
+    parts = re.split(r'Idea\s*\d:', text)
+    ideas = [p.strip() for p in parts if p.strip()]
+    if len(ideas) >= 3:
+        return ideas[:3]
+    else:
+        # If parsing fails, raise an exception to trigger fallback
+        raise Exception(f"Could not parse three ideas from response: {text}")
 
 def generate_concepts(data):
     """
     Advanced version: creates 3 distinct, flavorful backstory hooks
     that strongly reflect race, class, subclass, and any user details.
+    Each hook is now expanded with an additional descriptive sentence.
     """
     concepts = []
 
@@ -275,6 +298,11 @@ def generate_concepts(data):
     class_lower = data.get("class_", "").lower()
     subclass_lower = data.get("subclass", "").lower()
     details = data.get("details", "").strip()
+    sex = data.get("sex", "")
+    pronouns = get_pronouns(sex)
+    subj = pronouns["subj"]
+    obj = pronouns["obj"]
+    poss = pronouns["poss"]
 
     # ─── Race-flavored flavor pools ───────────────────────────────────────────────
     race_themes = {
@@ -361,6 +389,7 @@ def generate_concepts(data):
 
         color = random.choice(["crimson", "azure", "emerald", "golden", "shadow-black", "storm-silver"])
 
+        # Fill the main hook
         filled = template.format(
             tragedy_type     = random.choice(race_theme["tragedies"]),
             tragedy          = random.choice(race_theme["tragedies"]),
@@ -371,7 +400,7 @@ def generate_concepts(data):
             color            = color,
             personal_cost    = random.choice(PERSONAL_COSTS + ["their shadow", "their reflection", "their ability to dream"]),
 
-            # Add fallbacks for all old placeholders that might still exist in templates
+            # Fallbacks for all old placeholders
             power_awakening  = random.choice([
                 "a surge of raw magic erupted from within",
                 "an otherworldly voice offered power",
@@ -396,6 +425,21 @@ def generate_concepts(data):
             residual_power   = "a strange gift"
         )
 
+        # ─── Expand the hook with a follow‑up sentence ────────────────────────────
+        follow_up_template = random.choice(FOLLOW_UP_PHRASES)
+        follow_up = follow_up_template.format(
+            pronoun=subj,
+            trait=random.choice(TRAITS),
+            goal=random.choice(GOALS),
+            desire=random.choice(DESIRES),
+            action=random.choice(ACTIONS),
+            emotion=random.choice(EMOTIONS),
+            emotion_detail=random.choice(EMOTION_DETAILS),
+            dream_content=random.choice(DREAM_CONTENTS),
+            behavior=random.choice(BEHAVIORS)
+        )
+        filled += "\n\n" + follow_up
+
         # Add user details if provided
         if details:
             filled += f"\n\n(This hook incorporates: {details})"
@@ -405,7 +449,6 @@ def generate_concepts(data):
     return concepts
 
 import groq
-import os
 
 def generate_full_backstory(data, chosen_concept):
     # Get API key from environment (preferred) or hard-code it
@@ -647,6 +690,8 @@ class BackstoryApp:
         self.btn_expand = ttk.Button(btn_frame, text="Expand Selected → Full Backstory", command=self.expand, state="disabled")
         self.btn_expand.pack(side="left", padx=10)
         ttk.Button(btn_frame, text="Copy Advanced LLM Prompt", command=self.copy_advanced_prompt).pack(side="left", padx=10)
+        # New PDF button
+        ttk.Button(btn_frame, text="Save as PDF", command=self.save_pdf).pack(side="left", padx=10)
 
         # Selection frame
         select_frame = ttk.LabelFrame(self.root, text="Select one idea to expand", padding=10)
@@ -694,17 +739,24 @@ class BackstoryApp:
             messagebox.showwarning("Missing fields", f"Please fill: {', '.join(missing).title()}")
             return
 
-        self.concepts = generate_concepts(self.data)
-        
+        # Try AI generation first
+        try:
+            self.concepts = generate_ai_concepts(self.data)
+        except Exception as e:
+            # Fallback to old random generation
+            messagebox.showwarning("AI generation failed", 
+                                   f"Using fallback random generation.\nError: {e}")
+            self.concepts = generate_concepts(self.data)
+
         self.output_text.delete("1.0", "end")
         self.output_text.insert("end", "Three backstory hooks – pick one:\n\n")
-        
+
         for i, concept in enumerate(self.concepts, 1):
             self.output_text.insert("end", f"──── Idea {i} ────\n")
             self.output_text.insert("end", concept + "\n\n")
-        
+
         self.btn_expand.config(state="normal")
-        self.radio_var.set(1)  # default to first idea
+        self.radio_var.set(1)   # default to first idea
 
 
     def expand(self):
@@ -793,6 +845,53 @@ class BackstoryApp:
         self.root.update()  # force clipboard update
 
         messagebox.showinfo("Copied!", "Advanced LLM prompt copied to clipboard.\nPaste it into Claude, ChatGPT, Gemini, etc. for an even longer/more customized version.")
+
+    # ─── New method to save output as PDF ─────────────────────────────────────
+    def save_pdf(self):
+        """Save the current content of the output text area as a PDF file."""
+        if not REPORTLAB_AVAILABLE:
+            messagebox.showerror("Missing Library", 
+                                 "ReportLab is not installed.\n\n"
+                                 "Please install it with: pip install reportlab")
+            return
+
+        content = self.output_text.get("1.0", "end-1c").strip()
+        if not content:
+            messagebox.showwarning("No Content", "There is no text to save.")
+            return
+
+        # Ask user for filename
+        filename = filedialog.asksaveasfilename(
+            defaultextension=".pdf",
+            filetypes=[("PDF files", "*.pdf"), ("All files", "*.*")],
+            title="Save Backstory as PDF"
+        )
+        if not filename:
+            return  # user cancelled
+
+        try:
+            # Create a simple PDF with paragraphs
+            doc = SimpleDocTemplate(filename, pagesize=letter,
+                                    rightMargin=72, leftMargin=72,
+                                    topMargin=72, bottomMargin=72)
+            styles = getSampleStyleSheet()
+            style_normal = styles["Normal"]
+            # Allow for a bit more space between paragraphs
+            style_normal.spaceAfter = 6
+
+            # Split content into paragraphs (by double newline)
+            paragraphs = content.split("\n\n")
+            story = []
+            for para in paragraphs:
+                if para.strip():
+                    p = Paragraph(para.replace("\n", " "), style_normal)
+                    story.append(p)
+                    story.append(Spacer(1, 6))
+
+            doc.build(story)
+            messagebox.showinfo("Success", f"PDF saved to:\n{filename}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not save PDF:\n{str(e)}")
 
 if __name__ == "__main__":
     root = tk.Tk()
